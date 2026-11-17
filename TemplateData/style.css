@@ -1,0 +1,121 @@
+/* Flame and Blame's page in the game's one UI style (Docs/UI): near-monochrome, bone on the curtain's hearth, thin lines,
+   one font (Oswald), and one accent, the fire's orange, for the flame alone. */
+@font-face { font-family: 'FnB Title'; src: url('Oswald-Bold.ttf') format('truetype'); font-weight: 700; font-display: block; }
+
+:root {
+  --hearth: #120b09;      /* the curtain's back (0.07, 0.045, 0.035) */
+  --ink: #1f1714;         /* the letter on a key cap */
+  --paper: #efe8d9;       /* bone: text, lines, key caps, the bar (UiKit.Bone) */
+  --gold: #efe8d9;        /* the bar and the title are bone now */
+  --flame: #ff7833;       /* the accent (UiKit.Accent) */
+  --glow: rgba(255, 120, 51, 0.08);
+  --track: rgba(239, 232, 217, 0.15);
+  --hud: 'FnB Title', 'Oswald', 'Arial Narrow', sans-serif;
+  --title: 'FnB Title', 'Oswald', 'Arial Narrow', Impact, sans-serif;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; background: var(--hearth); color: var(--paper); overflow: hidden; }
+body { font-family: var(--hud); font-weight: 700; -webkit-font-smoothing: antialiased; }
+
+#game { position: fixed; inset: 0; background: var(--hearth); }
+#unity-canvas { display: block; width: 100%; height: 100%; background: var(--hearth); outline: none; }
+
+/* ---- The cover: loading, click to play, the controls ---- */
+.cover {
+  position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; padding: 24px 16px;
+  background: radial-gradient(120% 70% at 50% 108%, var(--glow), transparent 62%), var(--hearth);
+  transition: opacity 0.35s ease;
+  overflow-x: hidden; overflow-y: auto;
+}
+.cover.gone { opacity: 0; pointer-events: none; }
+.cover[data-state="ready"] { cursor: pointer; }
+.cover[data-state="keys"] { background: rgba(18, 11, 9, 0.82); cursor: pointer; }
+.cover[data-state="keys"] .logo, .cover[data-state="keys"] .loader, .cover[data-state="keys"] .play { display: none; }
+
+.stage { display: flex; flex-direction: column; align-items: center; gap: clamp(20px, 4.2vh, 44px); width: min(760px, 100%); }
+
+/* The title, as the menu draws it: the flame, then FLAME over "and BLAME", gold with a dark drop. */
+.logo { display: flex; align-items: center; gap: clamp(6px, 1.2vw, 14px); margin: 0; line-height: 0.92; font-weight: 700; }
+.logo-flame { display: block; width: clamp(48px, min(11vh, 14vw), 118px); aspect-ratio: 1; margin-right: 0.1em; animation: pulse 1.2s ease-in-out infinite alternate; transform-origin: 52.5% 55.9%; }
+/* The menu's flame: its single-colour fire icon in the accent. */
+.logo-flame span { display: block; width: 100%; height: 100%; background: var(--flame);
+  -webkit-mask: url('fire-mask.png') center / contain no-repeat; mask: url('fire-mask.png') center / contain no-repeat; }
+.logo-words { display: flex; flex-direction: column; font-family: var(--title); text-transform: uppercase; color: var(--paper); letter-spacing: 0.01em; }
+.logo-top, .logo-bottom { font-size: clamp(36px, min(9.5vh, 12vw), 104px); white-space: nowrap; }
+.logo-bottom .and { text-transform: none; }
+
+/* The bar, as the curtain draws it: a thin bone line on a faint track. */
+.loader { width: min(420px, 100%); display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.track { position: relative; overflow: hidden; width: 100%; height: 4px; border-radius: 2px; background: var(--track); }
+.fill { position: absolute; inset: 0; background: var(--paper); transform: scaleX(0); transform-origin: 0 50%; overflow: hidden; }
+.sheen { position: absolute; top: 0; bottom: 0; width: 30%; left: -30%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent); animation: sheen 1.8s linear infinite; }
+.status { margin: 0; min-height: 1.3em; font-size: clamp(18px, 2.6vh, 24px); color: rgba(239, 232, 217, 0.8); text-align: center; }
+
+/* Click to play: a hairline button in bone, like the game's own. */
+.play { display: inline-flex; align-items: center; gap: 12px; padding: 12px 28px 12px 20px; border: 2px solid rgba(239, 232, 217, 0.35); border-radius: 8px;
+  background: rgba(239, 232, 217, 0.05); color: var(--paper); font: 700 clamp(22px, 3.2vh, 30px) var(--hud); letter-spacing: 0.02em; cursor: pointer;
+  animation: breathe 2.4s ease-in-out infinite; }
+.play svg { width: 1.1em; height: 1.1em; fill: var(--paper); }
+.play:hover { background: rgba(239, 232, 217, 0.12); border-color: rgba(239, 232, 217, 0.9); }
+.play:focus-visible, .ghost:focus-visible, .tool:focus-visible { outline: 2px solid var(--paper); outline-offset: 4px; }
+
+.notice { max-width: 440px; text-align: center; font-size: 20px; line-height: 1.4; }
+.notice p { margin: 0 0 18px; }
+.ghost { font: 700 17px var(--hud); color: var(--paper); background: transparent; border: 2px solid rgba(239, 232, 217, 0.5); border-radius: 8px; padding: 10px 18px; cursor: pointer; }
+/* The Windows download: a quiet second action under Play (the ghost style), its reasons in small print. */
+.download { display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 460px; text-align: center; cursor: default; }
+.download-link { display: inline-flex; align-items: center; gap: 10px; font-size: 16px; padding: 8px 16px; letter-spacing: 0.02em;
+  color: rgba(239, 232, 217, 0.85); border-color: rgba(239, 232, 217, 0.28); text-decoration: none; }
+.download-link:hover { color: var(--paper); border-color: rgba(239, 232, 217, 0.8); background: rgba(239, 232, 217, 0.06); }
+.download-link svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.download p { margin: 0; font-size: 13px; line-height: 1.35; color: rgba(239, 232, 217, 0.6); letter-spacing: 0.02em; }
+.cover[data-state="keys"] .download { display: none; }
+.error { max-width: 520px; margin: 0; text-align: center; font-size: 20px; line-height: 1.4; color: var(--paper); }
+
+/* The controls: the game's key caps (small, flat, bone with the letter in ink). */
+.keys { list-style: none; margin: 0; padding: 16px 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 26px;
+  border-radius: 8px; border: 1px solid rgba(239, 232, 217, 0.12); background: rgba(15, 12, 11, 0.68); }
+.keys li { display: flex; align-items: center; gap: 10px; font-size: 16px; color: rgba(239, 232, 217, 0.75); white-space: nowrap; letter-spacing: 0.02em; }
+.caps { display: inline-flex; gap: 4px; }
+kbd { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 6px; border-radius: 6px; border: 0;
+  background: var(--paper); color: var(--ink); font: 700 16px var(--hud); }
+kbd.wide { font-size: 13px; padding: 0 9px; }
+.mouse { width: 34px; height: 38px; object-fit: contain; }
+.cover[data-state="phone"] .keys, .cover[data-state="error"] .keys { display: none; }
+
+/* ---- The shift's loading curtain, over the canvas ---- */
+.curtain { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  background: var(--hearth); pointer-events: none; transition: opacity 0.25s linear; }
+.curtain[hidden] { display: none; }
+.curtain.lifting { opacity: 0; }
+.curtain-flame { width: clamp(64px, 10.2vh, 110px); aspect-ratio: 1; margin-top: -4vh; animation: pulse 1.2s ease-in-out infinite alternate; transform-origin: 52.5% 55.9%;
+  background: var(--flame); -webkit-mask: url('fire-mask.png') center / contain no-repeat; mask: url('fire-mask.png') center / contain no-repeat; }
+.curtain .track { width: min(420px, 40vh, 86vw); height: 4px; margin-top: 5vh; }
+.curtain .fill { transition: transform 0.3s ease-out; }
+
+/* ---- The tools: full screen and the controls, out of the way ---- */
+.tools { position: absolute; z-index: 4; top: 12px; right: 12px; display: flex; gap: 8px; opacity: 0.55; transition: opacity 0.2s; }
+.tools:hover, .tools:focus-within { opacity: 1; }
+body.locked .tools { opacity: 0; pointer-events: none; }
+.tool { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 8px; border: 2px solid rgba(239, 232, 217, 0.25);
+  background: rgba(15, 12, 11, 0.8); color: var(--paper); font: 700 20px var(--hud); cursor: pointer; }
+.tool svg { width: 20px; height: 20px; fill: none; stroke: var(--paper); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* The flame breathes, no squash (the user: the old flicker looked crooked): 1 to 0.92 and back, 1.2 s each way, eased,
+   about the glyph's ink centre (fire-mask.png's centroid). ShiftCurtain does the same in the game's own curtain. */
+@keyframes pulse { from { transform: scale(1); } to { transform: scale(0.92); } }
+@keyframes sheen { to { transform: translateX(433%); } }
+@keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-flame, .curtain-flame, .play, .sheen { animation: none; }
+}
+@media (max-height: 560px) {
+  .keys { display: none; }
+}
+@media (max-height: 560px) {
+  .cover[data-state="keys"] .keys { display: flex; }
+}

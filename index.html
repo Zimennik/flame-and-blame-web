@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Flame and Blame</title>
+    <meta name="description" content="A co-op firefighting game: put out a fire in a block of flats with your crew, then read in the paper whose fault it was.">
+    <meta name="theme-color" content="#120b09">
+    <link rel="icon" href="TemplateData/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="TemplateData/icon-180.png">
+    <link rel="preload" href="TemplateData/Oswald-Bold.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <div id="game">
+      <canvas id="unity-canvas" tabindex="-1" aria-label="Flame and Blame"></canvas>
+
+      <!-- The page's own loading screen: loading, then "Click to play" (focus, sound, the mouse). -->
+      <div id="cover" class="cover" data-state="loading">
+        <div class="stage">
+          <h1 class="logo">
+            <span class="logo-flame" aria-hidden="true"><span></span></span>
+            <span class="logo-words"><span class="logo-top">Flame</span><span class="logo-bottom"><span class="and">and</span> Blame</span></span>
+          </h1>
+
+          <div class="loader" id="loader">
+            <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="track">
+              <div class="fill" id="fill"><div class="sheen"></div></div>
+            </div>
+          </div>
+
+          <button class="play" id="play" type="button" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span data-say="play"></span>
+          </button>
+
+          <!-- The second way to play, from the moment the page opens: the Windows build (the deploy puts the zip there). -->
+          <div class="download" id="download">
+            <a class="ghost download-link" id="download-link" href="downloads/FlameAndBlame-Windows.zip" download>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span data-say="download"></span>
+            </a>
+            <p class="download-why" data-say="downloadWhy"></p>
+          </div>
+
+          <div class="notice" id="notice" hidden>
+            <p data-say="desktop"></p>
+            <button class="ghost" id="anyway" type="button" data-say="anyway"></button>
+          </div>
+
+          <p class="error" id="error" hidden></p>
+
+          <ul class="keys" id="keys" aria-label="Controls">
+            <!-- Every binding from the input code (LocalPlayer, HubInput, TruckDriver, PauseOverlay); F2 is not in a release build. -->
+            <li><span class="caps"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span data-say="move"></span></li>
+            <li><span class="caps"><kbd class="wide">Shift</kbd></span><span data-say="run"></span></li>
+            <li><span class="caps"><kbd class="wide">Space</kbd></span><span data-say="jump"></span></li>
+            <li><span class="caps"><kbd>C</kbd></span><span data-say="crouch"></span></li>
+            <li><span class="caps"><kbd>E</kbd><img class="mouse" src="TemplateData/mouse-left.png" alt="or the left mouse button, hands empty"></span><span data-say="use"></span></li>
+            <li><span class="caps"><kbd>E</kbd></span><span data-say="ready"></span></li>
+            <li><span class="caps"><img class="mouse" src="TemplateData/mouse-left.png" alt="Left mouse button"></span><span data-say="spray"></span></li>
+            <li><span class="caps"><img class="mouse" src="TemplateData/mouse-right.png" alt="Right mouse button"></span><span data-say="drop"></span></li>
+            <li><span class="caps"><img class="mouse" src="TemplateData/mouse-wheel.png" alt="Mouse wheel"></span><span data-say="pressure"></span></li>
+            <li><span class="caps"><kbd>H</kbd></span><span data-say="horn"></span></li>
+            <li><span class="caps"><kbd class="wide">Esc</kbd></span><span data-say="pause"></span></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- A shift's loading curtain, drawn again by the page over the game's own (the browser animates it while a frame hangs). -->
+      <div id="curtain" class="curtain" hidden aria-hidden="true">
+        <div class="curtain-flame"></div>
+        <div class="track"><div class="fill" id="curtain-fill"><div class="sheen"></div></div></div>
+      </div>
+
+      <div class="tools" id="tools" hidden>
+        <button type="button" id="keys-button" class="tool" aria-expanded="false" data-say-title="controls">?</button>
+        <button type="button" id="fullscreen-button" class="tool" data-say-title="fullscreen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <script src="TemplateData/page.js"></script>
+    <script>
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/WebGL-release.loader.js";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/WebGL-release.data.unityweb",
+        frameworkUrl: buildUrl + "/WebGL-release.framework.js.unityweb",
+        codeUrl: buildUrl + "/WebGL-release.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        fullscreenElementID: "game",
+        companyName: "FnB Contest",
+        productName: "Flame and Blame",
+        productVersion: "0.1.0",
+      };
+      fnbPage.start(config, loaderUrl);
+    </script>
+      <script>/* fnb ping */
+// Anonymous "someone opened the game" pings to the owner's ntfy topic (no ids, no fingerprint, no IP kept by us).
+// Events: page opened, game loaded (seconds), first play click, left after N minutes. Off on localhost and with ?noping.
+// Bots: automated browsers (navigator.webdriver, headless/crawler user agents) send nothing; "opened" is sent only after
+// the page has been visible for 3 s, so link-preview and prefetch fetches that render and leave at once stay silent.
+(function () {
+  var host = location.hostname;
+  if (!host || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost') || /[?&]noping\b/.test(location.search)) return;
+  var ua = navigator.userAgent || '';
+  if (navigator.webdriver || /bot|crawl|spider|slurp|headless|lighthouse|preview|facebookexternalhit|embedly|whatsapp|telegram|discord|skype|curl|python|node-fetch|axios/i.test(ua)) return;
+  var url = 'https://ntfy.sh/fnb-pd0b176xdo1r80io25l9';
+  var t0 = Date.now();
+  var browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'other';
+  var device = /iPhone|iPad|iPod/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mobi/.test(ua) ? 'mobile' : 'desktop';
+  var lang = (navigator.language || '').slice(0, 2);
+  var tz = '';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { }
+  var ref = '';
+  try { if (document.referrer) ref = new URL(document.referrer).hostname; } catch (e) { }
+  function send(text, beacon) {
+    var body = 'FnB: ' + text + ' (' + browser + ', ' + device + ', ' + lang + (tz ? ', ' + tz : '') + (ref ? ', from ' + ref : '') + ')';
+    try {
+      if (beacon && navigator.sendBeacon) { navigator.sendBeacon(url, body); return; }
+      fetch(url, { method: 'POST', body: body, keepalive: true, mode: 'no-cors' });
+    } catch (e) { }
+  }
+  function secs() { return Math.round((Date.now() - t0) / 1000); }
+  var opened = false;
+  function open() { if (!opened) { opened = true; send('page opened'); } }
+  var visibleSince = document.visibilityState === 'visible' ? Date.now() : 0;
+  var openTimer = setInterval(function () {
+    if (document.visibilityState === 'visible') { if (!visibleSince) visibleSince = Date.now(); if (Date.now() - visibleSince >= 3000) { open(); clearInterval(openTimer); } }
+    else visibleSince = 0;
+  }, 500);
+  var play = document.getElementById('play');
+  if (play && window.MutationObserver) {
+    var shown = false;
+    new MutationObserver(function () {
+      if (!shown && !play.hidden) { shown = true; open(); send('game loaded in ' + secs() + ' s'); }
+    }).observe(play, { attributes: true, attributeFilter: ['hidden'] });
+  }
+  var started = false;
+  function start() { if (!started) { started = true; open(); send('started playing at ' + secs() + ' s'); } }
+  if (play) play.addEventListener('click', start);
+  document.addEventListener('pointerlockchange', function () { if (document.pointerLockElement) start(); });
+  var left = false;
+  function leave() {
+    if (left || !opened) return;
+    left = true;
+    var m = (Date.now() - t0) / 60000;
+    send('left after ' + (m < 1 ? Math.round(m * 60) + ' s' : m.toFixed(1) + ' min') + (started ? '' : ', never clicked play'), true);
+  }
+  window.addEventListener('pagehide', leave);
+})();
+
+    </script>
+  </body>
+</html>
